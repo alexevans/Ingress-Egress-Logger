@@ -23,6 +23,7 @@ import ConfigParser
 import datetime as datetime
 import sys
 
+#                              Member Name         Time Ingressed            Parking Pass num  Future Use - RFID?
 mydf = np.zeros( (0,), dtype=[('name',np.str_,16),('time',datetime.datetime),('pass',np.int_),('id',np.str_,12)] )
 
 def findUser(name):
@@ -84,9 +85,10 @@ def logout(data):
   if mydf['time'][i] == 0:
     lerror("You are already signed out")
   else:
-    f = open(name+'.time', 'a')
+    stop=datetime.datetime.now()
+    f = open(str(stop.year)+'-'+str(stop.month)+'-'+name+'.time', 'a')
     start=mydf['time'][i]
-    diff=datetime.datetime.now()-start
+    diff=stop-start
     f.write(str(start)+'; '+work.translate(None, ';')+'; '+str(diff)+'; \n')
     f.close()
     mydf['time'][i] = 0
@@ -159,13 +161,24 @@ def a_function():
   elif inp == 'reload':
     reloadUsers()
     lprint("Reloaded Users")
+  #elif inp == 'quit': return True
+  return False
     
 def main():
   reloadUsers()
-  print("\033[2J")#Clear Screen
-  while True:
+  print("\033[2J")# Clear Screen
+  quit=False
+  while not quit:
     try:
-      a_function()
+      quit=a_function()
     except:
-      lerror("Invalid command")
-  
+      lerror("ERROR")# I am lazy - Taylor
+      # No, but really it did say 'Invalid Command' because somewhere in a_function() if the command
+      # was malformed an exception would be thrown, there was a lot of them. Later I realized that I
+      # may have missed somthing else in another function, like the ones with file operations, so an
+      # all-catching except block was easier. That being said, in the time it took me to write this,
+      # I probablly could have wrote a try block in each function so that if there were an error, we
+      # would know where it came from. See how this comment block is justified, that was on purpose.
+
+if __name__ == '__main__':
+  main()
