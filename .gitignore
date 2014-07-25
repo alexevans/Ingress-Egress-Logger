@@ -1,3 +1,7 @@
+# Project related stuff
+*.time
+*names.ini
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
