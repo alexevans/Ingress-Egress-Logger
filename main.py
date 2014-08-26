@@ -22,6 +22,7 @@ import numpy as np
 import ConfigParser
 import datetime as datetime
 import sys
+import re
 
 #                              Member Name         Time Ingressed            Parking Pass num  Future Use - RFID?
 mydf = np.zeros( (0,), dtype=[('name',np.str_,16),('time',datetime.datetime),('pass',np.int_),('id',np.str_,12)] )
@@ -96,16 +97,16 @@ def logout(data):
 
 def listin():
   if not np.any(mydf['time'] <> 0):
-    lerror("Lab is empty.")
+    lprint("Lab is empty.")
   else:
     for i in list(np.where(mydf['time'] <> 0)[0]):
       lprint(mydf['name'][i])
   if not np.any(mydf['pass'] <> -1):
     lprint('All passes are signed-in')
   else:
-    lerror("\n\rPARKING PASSES\n\r--------------")
+    lprint("\n\rPARKING PASSES\n\r--------------")
     for i in list(np.where(mydf['pass'] <> -1)[0]):
-      lerror(str(mydf['pass'][i])+' '+mydf['name'][i])
+      lprint(str(mydf['pass'][i])+' '+mydf['name'][i])
     
 def help():
   print("\033[0;33m")
@@ -149,6 +150,8 @@ def passes(data):
 def a_function():
   help()
   inp=raw_input("\033[;32mReady: \033[0m")
+  inp=inp.lstrip()
+  inp=re.sub(' +',' ',inp)
   code = inp.partition(' ')[0][0]
   if code == 'i':
     login(inp.partition(' ')[2])
