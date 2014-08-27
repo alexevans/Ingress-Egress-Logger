@@ -24,8 +24,8 @@ import datetime as datetime
 import sys
 import re
 
-#                              Member Name         Time Ingressed            Parking Pass num  Future Use - RFID?
-mydf = np.zeros( (0,), dtype=[('name',np.str_,16),('time',datetime.datetime),('pass',np.int_),('id',np.str_,12)] )
+#                              Member Name         Time Ingressed            Parking Pass num   got pass time               Future Use - RFID?
+mydf = np.zeros( (0,), dtype=[('name',np.str_,16),('time',datetime.datetime),('pass',np.int_),('passtime',datetime.datetime),('id',np.str_,12)] )
 
 def findUser(name):
   global mydf
@@ -45,7 +45,7 @@ def importUser(name, id, overwriteID=False):
         print('WARN:  Overwriting '+name+'\'s id.', file=sys.stderr)
       mydf['id'][i]=id
     return
-  newUser = np.zeros( (1,), dtype=[('name',np.str_,16),('time',datetime.datetime),('pass',np.int_),('id',np.str_,12)] )
+  newUser = np.zeros( (1,), dtype=[('name',np.str_,16),('time',datetime.datetime),('pass',np.int_),('passtime',datetime.datetime),('id',np.str_,12)] )
   newUser['name'][0]=name
   newUser['id'][0]=id
   newUser['pass'][0]=-1
@@ -106,7 +106,7 @@ def listin():
   else:
     lprint("\n\rPARKING PASSES\n\r--------------")
     for i in list(np.where(mydf['pass'] <> -1)[0]):
-      lprint(str(mydf['pass'][i])+' '+mydf['name'][i])
+      lprint(str(mydf['pass'][i])+' '+mydf['name'][i]+' '+str(datetime.datetime.now()-mydf['passtime'][i]))
     
 def help():
   print("\033[0;33m")
@@ -135,7 +135,11 @@ def passes(data):
       lerror("Parking pass number "+digit+" is already out")
       return
     mydf['pass'][i]=int(digit)
-    lprint(name+' checked-out pass number '+digit)
+    mydf['passtime'][i]=datetime.datetime.now()
+    f = open('passes.log', 'a')
+    lprint(name+' checked-out pass number '+digit+' at '+str(mydf['passtime'][i]))
+    f.write(name+' checked-out pass number '+digit+' at '+str(mydf['passtime'][i])+'\n')
+    f.close()
   elif code[0] == 'r':
     if not np.any(mydf['pass'] == int(digit)):
       lerror("Pass humber "+digit+" is already checked-in")
@@ -143,9 +147,15 @@ def passes(data):
     p=np.where(mydf['pass']==int(digit))[0][0]
     mydf['pass'][p]=-1
     if name == mydf['name'][p]:
+      f = open('passes.log', 'a')
       lprint(name+' checked-in pass number '+digit)
+      f.write(name+' checked-in pass number '+digit+'\n')
+      f.close()
     else:
+      f = open('passes.log', 'a')
       lerror(name+' checked-in pass number '+digit+' for '+mydf['name'][p])
+      f.write(name+' checked-in pass number '+digit+' for '+mydf['name'][p]+'\n')
+      f.close()
   
 def a_function():
   help()
