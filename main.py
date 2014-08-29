@@ -2,17 +2,17 @@
 
 # SPSU AUV Team Ingress-Egress-Logger
 # Copyright (C) 2014  SPSU AUV Team
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
@@ -23,6 +23,11 @@ import ConfigParser
 import datetime as datetime
 import sys
 import re
+import subprocess
+
+
+passcount = 4
+mail_header = "From: \"SPSU AUV Door PC\" <no-reply@spsu.edu>\nTo: \"Taylor Martin\" <taylormartin357@gmail.com>\nSubject: Parking Passes\n"
 
 #                              Member Name         Time Ingressed            Parking Pass num   got pass time               Future Use - RFID?
 mydf = np.zeros( (0,), dtype=[('name',np.str_,16),('time',datetime.datetime),('pass',np.int_),('passtime',datetime.datetime),('id',np.str_,12)] )
@@ -50,19 +55,19 @@ def importUser(name, id, overwriteID=False):
   newUser['id'][0]=id
   newUser['pass'][0]=-1
   mydf=np.append(mydf, newUser)
-  
+
 def reloadUsers():
   cnames=ConfigParser.RawConfigParser()
   cnames.read('names.ini')
   for entry in cnames.sections():
     importUser(entry, cnames.get(entry,'id'), overwriteID=True)
-  
+
 def lerror(str):
   print('\a\a\a\033[;31m'+str+'\033[0m')
-  
+
 def lprint(str):
   print('\033[;36m'+str+'\033[0m')
-  
+
 def login(name):
   i=findUser(name)
   if i == -1:
@@ -74,7 +79,7 @@ def login(name):
     lprint(name+' signed-in')
   else:
     lerror("You are already signed in")
-  
+
 def logout(data):
   name = data.partition(' ')[0]
   work = data.partition(' ')[2]
@@ -107,7 +112,7 @@ def listin():
     lprint("\n\rPARKING PASSES\n\r--------------")
     for i in list(np.where(mydf['pass'] <> -1)[0]):
       lprint(str(mydf['pass'][i])+' '+mydf['name'][i]+' '+str(datetime.datetime.now()-mydf['passtime'][i]))
-    
+
 def help():
   print("\033[0;33m")
   print("Sign In: i name")
@@ -116,9 +121,10 @@ def help():
   print("Get Parking Pass: p g last_digit name")
   print("Return Parking Pass: p r last_digit name")
   print("\033[0m")
-  
+
 def passes(data):
   global mydf
+  global passcount
   code = data.partition(' ')[0]
   digit = data.partition(' ')[2].partition(' ')[0]
   name = data.partition(' ')[2].partition(' ')[2]
@@ -140,6 +146,17 @@ def passes(data):
     lprint(name+' checked-out pass number '+digit+' at '+str(mydf['passtime'][i]))
     f.write(name+' checked-out pass number '+digit+' at '+str(mydf['passtime'][i])+'\n')
     f.close()
+    passcount = passcount - 1
+    if passcount is 1:
+      try:
+        subprocess.check_output("echo \""+mail_header+"One Pass Left\" | ssmtp -t", shell=True)
+      except:
+        lerror('mail not send')
+    elif passcount is 0:
+      try:
+        subprocess.check_output("echo \""+mail_header+"All Passes Gone\" | ssmtp -t", shell=True)
+      except:
+        lerror('mail not send')
   elif code[0] == 'r':
     if not np.any(mydf['pass'] == int(digit)):
       lerror("Pass humber "+digit+" is already checked-in")
@@ -156,7 +173,19 @@ def passes(data):
       lerror(name+' checked-in pass number '+digit+' for '+mydf['name'][p])
       f.write(name+' checked-in pass number '+digit+' for '+mydf['name'][p]+'\n')
       f.close()
-  
+    passcount = passcount + 1
+    if passcount is 1:
+      try:
+        subprocess.check_output("echo \""+mail_header+"One Pass Left\" | ssmtp -t", shell=True)
+      except:
+        lerror('mail not send')
+    elif passcount > 1:
+      try:
+        subprocess.check_output("echo \""+mail_header+"Multiple Passes Left\" | ssmtp -t", shell=True)
+      except:
+        lerror('mail not send')
+
+
 def a_function():
   help()
   inp=raw_input("\033[;32mReady: \033[0m")
@@ -176,7 +205,7 @@ def a_function():
     lprint("Reloaded Users")
   #elif inp == 'quit': return True
   return False
-    
+
 def main():
   reloadUsers()
   print("\033[2J")# Clear Screen
@@ -195,3 +224,4 @@ def main():
 
 if __name__ == '__main__':
   main()
+
